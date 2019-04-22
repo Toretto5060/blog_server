@@ -4,7 +4,7 @@ const jwt = require("./tokenFuc"); //生成token
 
 let app = express();
 let sqlCont={
-host:'',        // ip
+  host:'',        // ip
   user:'',      //用户名
   password:'',  //密码
   database:''   //数据库名
