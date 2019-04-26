@@ -19,12 +19,13 @@ function handleMySql(fn){
   });
 }
 //用户注册(检测用户名是否可用)
+
 server.app.post("/checkUser", (req, res) => {
-      if (req.body.user == '' && req.body.psw == '') {
-        return res.status(403).send({
+      if (!req.body.user) {
+        return res.status(200).send({
           success: false,
           code: -1,
-          message: '请保证账号密码的完整性'
+          message: '参数'
         });
         return;
       }
