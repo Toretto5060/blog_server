@@ -2,6 +2,10 @@ const server = require('../server');
 const crypto = require('crypto'); //加载md5加密文件
 const mysql = require("mysql");
 const jwt = require("../tokenFuc"); //生成token
+const https = require("https");
+const qs = require("querystring");
+const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 
 function handleMySql(fn){
   let db = mysql.createConnection(server.sqlCont);
@@ -21,6 +25,7 @@ function handleMySql(fn){
 //用户注册(检测用户名是否可用)
 
 server.app.post("/checkUser", (req, res) => {
+      console.log(req.body.user)
       if (!req.body.user) {
         return res.status(200).send({
           success: false,
@@ -53,57 +58,161 @@ server.app.post("/checkUser", (req, res) => {
             }
           });
       });
-  }),
+}),
 
 //用户注册
-server.app.post("/register",(req,res) => {
-  if (req.body.user == '' && req.body.psw =='') {
-     return res.status(403).send({
-       success: false,
-       code: -1,
-       message: '请保证账号密码的完整性'
-     });
-    return;
-  }
-  handleMySql((db) => {
-    db.query(
-      'select * from user where user_name = ?',
-      [req.body.user],(error,rows) => {
-        if(error){
 
-        }
-        if(rows.length<1){
-          inFo(req);
-        }
-        else
-        {
-          console.log('用户名重复，请换一个昵称试试');
-          res.json({"code":"-1", "message": "用户名重复"});
-          db.end();
-        }
-    });
-  });
-  function inFo(setDatas){
-    handleMySql((db) => {
-      const hash = crypto.createHash('md5');
-      hash.update(setDatas.body.psw);
-      let md5Paw=hash.digest('hex');
-      db.query(
-        'INSERT INTO user SET  ?',
-        {user_name:setDatas.body.user,password:md5Paw,role:1},(error,rows) => {  // role 1 : 用户 仅对自己账户有控制权，进行文章删除增加  role 2 : 管理员 对不符合规定文章有删除权利  role 9 超级管理员 对用户、管理员有绝对权限，过敏文章删除、用户权限增加
-        if(error){
-          console.log(error);
-          res.send({"status":502, "message": error});
-        }else{
-          console.log('注册成功')
-          res.json({"status":res.statusCode, "message": "注册成功"});
-        }
-        db.end();
-        console.log("已关闭数据库")
-      });
-    })
+server.app.post("/register",(req,res) => {
+  console.log(req.session[req.body.user] )
+})
+
+//
+// server.app.post("/register",(req,res) => {
+//   if (req.body.user == '' && req.body.psw =='') {
+//      return res.status(403).send({
+//        success: false,
+//        code: -1,
+//        message: '请保证账号密码的完整性'
+//      });
+//     return;
+//   }
+//   handleMySql((db) => {
+//     db.query(
+//       'select * from user where user_name = ?',
+//       [req.body.user],(error,rows) => {
+//         if(error){
+
+//         }
+//         if(rows.length<1){
+//           inFo(req);
+//         }
+//         else
+//         {
+//           console.log('用户名重复，请换一个昵称试试');
+//           res.json({"code":"-1", "message": "用户名重复"});
+//           db.end();
+//         }
+//     });
+//   });
+//   function inFo(setDatas){
+//     handleMySql((db) => {
+//       const hash = crypto.createHash('md5');
+//       hash.update(setDatas.body.psw);
+//       let md5Paw=hash.digest('hex');
+//       db.query(
+//         'INSERT INTO user SET  ?',
+//         {user_name:setDatas.body.user,password:md5Paw,role:1},(error,rows) => {  // role 1 : 用户 仅对自己账户有控制权，进行文章删除增加  role 2 : 管理员 对不符合规定文章有删除权利  role 9 超级管理员 对用户、管理员有绝对权限，过敏文章删除、用户权限增加
+//         if(error){
+//           console.log(error);
+//           res.send({"status":502, "message": error});
+//         }else{
+//           console.log('注册成功')
+//           res.json({"status":res.statusCode, "message": "注册成功"});
+//         }
+//         db.end();
+//         console.log("已关闭数据库")
+//       });
+//     })
+//   }
+// });
+
+//设置session相关
+server.app.use(cookieParser());
+server.app.use(cookieSession({
+ //session的秘钥，防止session劫持。 这个秘钥会被循环使用，秘钥越长，数量越多，破解难度越高。
+ keys: ['shitou', 'toretto', 'message'],
+ //session过期时间，不易太长。php默认20分钟
+ maxAge: 60*10*1000,
+ //可以改变浏览器cookie的名字
+ name: 'session'
+}));
+
+//获取验证码
+server.app.post("/aothCode",(req,res) => {
+  let randomNum = ('000000' + Math.floor(Math.random() * 999999)).slice(-6);
+  let apikey = '18632d9c2e29c1f81dfc913bc6930fe1';
+  let mobile = req.body.user;
+  let code= "66";
+  let msg= "33";
+  // var text = '您的验证码是'+randomNum + "10分钟内有效";
+  req.session[mobile] = randomNum
+  // 指定发送的模板编号
+  var tpl_id = 2850978;
+  // 指定发送模板的内容
+  var tpl_value =  {'#code#': randomNum};
+  // 查询账户信息
+  var get_user_info_uri = '/v2/user/get.json';
+  // 匹配模板发送https地址
+  var sms_host = 'sms.yunpian.com';
+
+  send_tpl_sms_uri = '/v2/sms/tpl_single_send.json';
+
+
+  let query_user_info = (uri,apikey) => {
+    var post_data = {  
+    'apikey': apikey,  
+    };//这是需要提交的数据
+    var content = qs.stringify(post_data);  
+    post(uri,content,sms_host);
   }
-});
+  let send_tpl_sms = (uri,apikey,mobile,tpl_id,tpl_value) => {
+    var post_data = {  
+      'apikey': apikey,
+      'mobile':mobile,
+      'tpl_id':tpl_id,
+      'tpl_value':qs.stringify(tpl_value),  
+    };//这是需要提交的数据  
+    var content = qs.stringify(post_data);  
+    post(uri,content,sms_host); 
+  }
+
+  let post = (uri,content,host) => {
+    var options = {  
+      hostname: host,
+      port: 443,  
+      path: uri,  
+      method: 'POST',  
+      headers: {  
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'  
+      }  
+    };
+    var req = https.request(options, (r) => {
+      r.setEncoding('utf8');  
+      r.on('data', function (chunk) {
+        code = JSON.parse(chunk).code;
+        if (code == 0) {
+          msg = JSON.parse(chunk).msg
+        } else if (code > 0) {
+          msg = (JSON.parse(chunk).msg) + "," + (JSON.parse(chunk).detail)
+        }
+        res.send("666")
+
+      });
+    });
+    req.write(content);
+    req.end();
+  }
+  query_user_info(get_user_info_uri,apikey);
+  send_tpl_sms(send_tpl_sms_uri,apikey,mobile,tpl_id,tpl_value);
+})
+
+// server.app.get("sesson",(req,res) => {
+ 
+
+ //  server.app.get('/sesson', function (req, res) {
+ //    //  //假设使用count记录用户访问的次数
+ //    // if(req.session['count'] == null) {
+ //    //     req.session['count'] = 1;
+ //    // }else{
+ //    //     req.session['count']++;
+ //    // }
+ //    // console.log(req.session['count'])
+ //    //  res.send('ok')
+ // })
+
+
+
+// })
 
 //用户登录
 server.app.post("/login",(req,res) => {
