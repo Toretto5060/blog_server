@@ -2,11 +2,6 @@ const express = require("express");
 const bodyParser=require("body-parser");
 const jwt = require("./tokenFuc"); //生成token
 
-const https = require("https");
-const qs = require("querystring");
-const cookieParser = require('cookie-parser');
-const cookieSession = require('cookie-session');
-
 let app = express();
 let sqlCont={
   host:'47.95.1.44',        // ip
@@ -14,19 +9,6 @@ let sqlCont={
   password:'123456',        //密码
   database:'blog_webServer' //数据库名
 }
-
-//设置session相关
-app.use(cookieSession({
- //session的秘钥，防止session劫持。 这个秘钥会被循环使用，秘钥越长，数量越多，破解难度越高。
- keys: ['shitou', 'toretto', 'message'],
- //session过期时间，不易太长。php默认20分钟
- maxAge: 60*10*1000,
- resive: false,
- //可以改变浏览器cookie的名字
- name: 'session'
-}));
-app.use(cookieParser());
-
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());

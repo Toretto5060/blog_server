@@ -2,6 +2,8 @@ const server = require('../server');
 const crypto = require('crypto'); //加载md5加密文件
 const mysql = require("mysql");
 const jwt = require("../tokenFuc"); //生成token
+var https = require('https');
+var qs = require('querystring');
 
 function handleMySql(fn){
   let db = mysql.createConnection(server.sqlCont);
@@ -18,7 +20,6 @@ function handleMySql(fn){
     }
   });
 }
-
 
 //用户注册(检测用户名是否可用)
 server.app.post("/checkUser", (req, res) => {
@@ -58,18 +59,12 @@ server.app.post("/checkUser", (req, res) => {
 
 //获取验证码
 server.app.post("/aothCode",(req,res) => {
+  let nowDate = new Date().getTime();
   let randomNum = ('000000' + Math.floor(Math.random() * 999999)).slice(-6);
   let apikey = '18632d9c2e29c1f81dfc913bc6930fe1';
   let mobile = req.body.user;
-  let code= "66";
-  let msg= "33";
-  req.session[mobile] = randomNum
-  res.send({
-    code:0,
-    msg:"成功"
-  })
-  console.log(req.session)
-  return;
+  let code= "";
+  let msg= "";
   // var text = '您的验证码是'+randomNum + "10分钟内有效";
   // 指定发送的模板编号
   var tpl_id = 2850978;
@@ -81,7 +76,6 @@ server.app.post("/aothCode",(req,res) => {
   var sms_host = 'sms.yunpian.com';
 
   send_tpl_sms_uri = '/v2/sms/tpl_single_send.json';
-
 
   let query_user_info = (uri,apikey) => {
     var post_data = {  
@@ -118,6 +112,18 @@ server.app.post("/aothCode",(req,res) => {
           code = JSON.parse(chunk).code;
           if (code == 0) {
             msg = JSON.parse(chunk).msg
+            handleMySql((db) => {  // 发送成功后，将此随机数保存入表中
+              db.query(
+                'INSERT INTO aothCode SET  ?',
+                {user:req.body.user,aothCode:randomNum.toString(),time:nowDate},(error,rows) => {  // role 1 : 用户 仅对自己账户有控制权，进行文章删除增加  role 2 : 管理员 对不符合规定文章有删除权利  role 9 超级管理员 对用户、管理员有绝对权限，过敏文章删除、用户权限增加
+                if(error){
+                  console.log(error);
+                }else{
+                  console.log('aothCode保存成功');
+                }
+                db.end();
+              });
+            });
           } else if (code > 0) {
             code = -1,
             msg = "访问频繁，请稍后再试!"
@@ -136,33 +142,10 @@ server.app.post("/aothCode",(req,res) => {
   send_tpl_sms(send_tpl_sms_uri,apikey,mobile,tpl_id,tpl_value);
 })
 
-server.app.post("/rest",(req,res) => {
-  res.send("666")
-  console.log(req.session)
-})
-
 //用户注册
 server.app.post("/register",(req,res) => {
-  console.log(req.session)
-  if (req.session[req.body.user] == undefined) {
-    res.status(200).send({
-      code: -10000,
-      msg: "验证码已失效"
-    })
-    return;
-  } else if (req.session[req.body.user] != req.body.aothCode) {
-    res.status(200).send({
-      code: -20000,
-      msg: "验证码错误"
-    })
-    return;
-  } else {
-    res.status(200).send({
-      code: 0,
-      msg: "验证码正确"
-    })
-  }
-
+  
+  return;
   if (req.body.user == '' && req.body.psw =='') {
      return res.status(403).send({
        success: false,
