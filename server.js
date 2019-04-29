@@ -4,17 +4,17 @@ const jwt = require("./tokenFuc"); //生成token
 
 let app = express();
 let sqlCont={
-  host:'',        // ip
-  user:'',      //用户名
-  password:'',  //密码
-  database:''   //数据库名
+  host:'47.95.1.44',        // ip
+  user:'root',              //用户名
+  password:'123456',        //密码
+  database:'blog_webServer' //数据库名
 }
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // 白名单
-let whiteList = ['/login','/register','/checkUser','/province','/city','/county','/profession','/tast']
+let whiteList = ['/login','/register','/checkUser','/province','/city','/county','/profession','/tast','/aothCode']
 
 app.all('*', function(req, res, next) {
     if (req.method == "OPTIONS") {
