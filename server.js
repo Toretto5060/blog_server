@@ -10,6 +10,7 @@ let sqlCont={
   database:'blog_webServer' //数据库名
 }
 
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
@@ -44,7 +45,8 @@ app.listen(port,function(){
 
 module.exports = {
   app,
-  sqlCont
+  sqlCont,
+  // transport
 };
 const register = require('./port/user.js');
 
