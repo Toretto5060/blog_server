@@ -29,7 +29,7 @@ server.app.post("/checkUser", (req, res) => {
     return res.status(200).send({
       success: false,
       code: -1,
-      message: '参数'
+      msg: '参数'
     });
     return;
   }
@@ -43,14 +43,14 @@ server.app.post("/checkUser", (req, res) => {
         if (rows.length >0) {
           res.json({
             "code": -1,
-            "message": "用户名重复"
+            "msg": "用户名重复"
           });
           db.end();
           console.log('已关闭数据库');
         } else {
           res.json({
             "code": 0,
-            "message": "用户名可用"
+            "msg": "用户名可用"
           });
           db.end();
           console.log('已关闭数据库');
@@ -239,13 +239,69 @@ server.app.post("/emailAothCode",(req,res) => {
 
 })
 
+// 获取token
+function gainToken(req,res,rgs) {
+  handleMySql((db) => {
+    const hash = crypto.createHash('md5');
+    hash.update(req.body.psw);
+    let md5Paw=hash.digest('hex');
+    db.query(
+      'select * from user where ( user_name = ? or nick_name = ? ) and password = ?',
+      [req.body.user,req.body.user, md5Paw],
+      function(error,rows){
+        if(error){
+          throw error;
+        };
+        if(rows.length<1){
+          res.send({'code':'-1','msg':'密码错误'})
+        }else{
+          let content = {
+            user: req.body.user
+          }; // 要生成token的主题信息
+          let token = jwt.generateToken(content);
+          rows[0].token = token;
+          console.log(rows[0])
+          let postData = {
+            id : rows[0].user_id,
+            name: rows[0].user_name,
+            nick_name: rows[0].nick_name,
+            sex:rows[0].sex,
+            birthday:rows[0].birthday,
+            area:rows[0].area,
+            post_position:rows[0].post_position,
+            post:rows[0].post,
+            // role:rows[0].role,
+            token:rows[0].token,
+
+          }
+          if (rgs) {
+            res.status(200).send({
+              code: 0,
+              data: postData,
+              msg: "注册成功，即将进入首页"
+            })
+          } else {
+            res.status(200).send({
+              code: 0,
+              data: postData,
+              msg: "登录成功"
+            })
+          }
+        }
+        db.end();
+        console.log("已关闭数据库")
+      });
+
+  })
+}
+
 //用户注册
 function rgstUser (req,res) {
   if (req.body.user == '' && req.body.psw =='') {
    return res.status(403).send({
      success: false,
      code: -60000,
-     message: '请保证账号密码的完整性'
+     msg: '请保证账号密码的完整性'
     });
     return;
   }
@@ -264,7 +320,7 @@ function rgstUser (req,res) {
           console.log('用户名重复');
           res.status(200).send({
             code:"-30000",
-            message: "用户名重复"
+            msg: "用户名重复"
           });
         }
     });
@@ -281,10 +337,10 @@ function rgstUser (req,res) {
         {user_name:setDatas.body.user,password:md5Paw,role:1},(error,rows) => {  // role 1 : 用户 仅对自己账户有控制权，进行文章删除增加  role 2 : 管理员 对不符合规定文章有删除权利  role 9 超级管理员 对用户、管理员有绝对权限，过敏文章删除、用户权限增加
         if(error){
           console.log(error);
-          res.send({code:502, message: error});
+          res.send({code:502, msg: error});
         }else{
+          gainToken(req,res,1)
           console.log('注册成功')
-          res.send({code:0, message: "注册成功"});
         }
         db.end();
         console.log("已关闭数据库")
@@ -293,6 +349,7 @@ function rgstUser (req,res) {
   }
 }
 
+//用户注册验证验证码
 server.app.post("/register",(req,res) => {
   handleMySql((db) => {
     db.query(
@@ -345,60 +402,17 @@ server.app.post("/login",(req,res) => {
             console.log('用户不存在')
             res.json({
               "code": "-1",
-              "message": "用户不存在"
+              "msg": "用户不存在"
             });
           }else{
             console.log("已查询到用户")
-            inFo(req);
+            gainToken(req,res);
           }
           db.end();
           console.log("已关闭数据库")
         });
   });
-   function inFo(datas) {
-    handleMySql((db) => {
-      const hash = crypto.createHash('md5');
-      hash.update(datas.body.psw);
-      let md5Paw=hash.digest('hex');
-      db.query(
-        'select * from user where ( user_name = ? or nick_name = ? ) and password = ?',
-        [datas.body.user,datas.body.user, md5Paw],
-        function(error,rows){
-          if(error){
-            throw error;
-          };
-          if(rows.length<1){
-            res.send({'code':'-1','msg':'密码错误'})
-          }else{
-            let content = {
-              user: datas.body.user
-            }; // 要生成token的主题信息
-            let token = jwt.generateToken(content);
-            rows[0].token = token;
-            console.log(rows[0])
-            let postData = {
-              id : rows[0].user_id,
-              name: rows[0].user_name,
-              nick_name: rows[0].nick_name,
-              sex:rows[0].sex,
-              birthday:rows[0].birthday,
-              area:rows[0].area,
-              post_position:rows[0].post_position,
-              post:rows[0].post,
-              role:rows[0].role,
-              token:rows[0].token,
 
-            }
-            res.send({'code':'0','data':postData,'msg':'登录成功'})
-            // console.log('登录成功')
-            // res.send({"code":"0","msg":"登录成功"});
-          }
-          db.end();
-          console.log("已关闭数据库")
-        });
-
-    })
-  }
 });
 
 // 验证是否登录
@@ -432,7 +446,7 @@ function cityDataDispose(req,res){
         res.status(200).send({
           code:0,
           data:rows,
-          message:'获取成功'
+          msg:'获取成功'
         })
       }
       db.end()
@@ -483,7 +497,7 @@ server.app.get('/profession',(req,res) => {
         res.status(200).send({
           code:0,
           data:rows,
-          message:'获取成功'
+          msg:'获取成功'
         })
       }
       db.end()

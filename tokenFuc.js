@@ -18,10 +18,10 @@ class Jwt {
       // 确认token
       jwt.verify(token, "shitou5698",  (err, decoded) => {
         if (err) {
-          return res.status(301).send({
+          return res.status(401).send({
             success: false,
             code:-1,
-            message: '登录信息过期'
+            msg: '登录信息过期'
           });
         } else {
           // 如果没问题的操作
@@ -30,10 +30,10 @@ class Jwt {
       });
     } else {
       // 如果没有token，则返回错误
-      return res.status(301).send({
+      return res.status(401).send({
         success: false,
         code:-1,
-        message: '请登录后再试'
+        msg: '请先登录'
       });
     }
 

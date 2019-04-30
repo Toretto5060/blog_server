@@ -15,7 +15,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // 白名单
-let whiteList = ['/login','/register','/checkUser','/province','/city','/county','/profession','/tast','/aothCode']
+let whiteList = ['/login','/register','/checkUser','/province','/city','/county','/profession','/tast','/aothCode','/emailAothCode']
 
 app.all('*', function(req, res, next) {
     if (req.method == "OPTIONS") {
@@ -28,11 +28,11 @@ app.all('*', function(req, res, next) {
       res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
       res.header("X-Powered-By", ' 3.2.1')
       res.header("Content-Type", "application/json;charset=utf-8");
-        if (whiteList.indexOf('/checkUser') > -1) {
-          next();
-        } else {
-          jwt.verifyToken(req,res,next)
-        }
+      if (whiteList.indexOf(req.url) > -1) {
+        next();
+      } else {
+        jwt.verifyToken(req,res,next)
+      }
     }
 });
 
@@ -48,7 +48,8 @@ module.exports = {
   sqlCont,
   // transport
 };
-const register = require('./port/user.js');
+const users = require('./port/user.js');
+const lists = require('./port/list.js');
 
 
 //测试使用 supervisor (npm install -g supervisor) 启动server.js
