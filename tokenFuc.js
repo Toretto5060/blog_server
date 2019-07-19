@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken"); //生成token
 const verifyJwt = require('jwt-simple'); //验证token
 
+
 class Jwt {
   //生成token
   generateToken(data){  //data:要生成token的主题信息
@@ -16,6 +17,7 @@ class Jwt {
     let token = req.headers['blog_token'];
     if (token) {
       // 确认token
+      console.log(jwt)
       jwt.verify(token, "shitou5698",  (err, decoded) => {
         if (err) {
           return res.status(401).send({
@@ -33,11 +35,9 @@ class Jwt {
       return res.status(401).send({
         success: false,
         code:-1,
-        msg: '请先登录'
+        msg: '未登录'
       });
     }
-
-
   }
 }
 
